@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ABC-11 · Mô phỏng biến động giá cổ phiếu</title>
+  <meta name="description" content="Video mô phỏng 365 ngày × 7 phiên giao dịch của mã ABC-11 bằng numpy, pandas, matplotlib.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="#">ABC-11<span>/VND</span></a>
+    <nav>
+      <a href="#video">Video</a>
+      <a href="#q1">Tháng</a>
+      <a href="#q2">Quý</a>
+      <a href="#q3">Bất thường</a>
+      <a href="#q4">Phân bố</a>
+      <a href="#q5">Xu hướng</a>
+      <a href="#q6">Màu sắc</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" id="video">
+      <div class="hero-text">
+        <p class="eyebrow">365 ngày × 7 phiên = 2.555 mức giá</p>
+        <h1>Một năm giá cổ phiếu,<br>trong <em>một phút</em>.</h1>
+        <p class="lede">Mô phỏng biến động mã <b>ABC-11</b> với hành lang sàn–trần ±10%, nến ngày, đường giá theo phiên
+          và bảng giá trực tiếp — chỉ dùng <code>numpy</code>, <code>pandas</code>, <code>matplotlib</code>.</p>
+        <ul class="legend">
+          <li><i style="background:#ffd400"></i>Tham chiếu</li>
+          <li><i style="background:#3b82f6"></i>Sàn</li>
+          <li><i style="background:#b45cff"></i>Trần</li>
+          <li><i style="background:#ff3b4e"></i>Dưới TC</li>
+          <li><i style="background:#22d36b"></i>Trên TC</li>
+        </ul>
+      </div>
+      <div class="player">
+        <video controls preload="metadata" playsinline>
+          <source src="{{ url_for('static', path='video/clt_simulation.mp4') }}" type="video/mp4">
+          Trình duyệt không hỗ trợ video.
+        </video>
+      </div>
+    </section>
+
+    <section class="kpis">
+      <div><span>Giá đầu → cuối năm</span><b>{{ '{:,.0f}'.format(sm.first) }} → {{ '{:,.0f}'.format(sm.last) }}</b></div>
+      <div><span>Trung bình ± độ lệch chuẩn</span><b>{{ '{:,.0f}'.format(sm.mean) }} ± {{ '{:,.0f}'.format(sm.std) }}</b></div>
+      <div><span>Đỉnh năm</span><b class="up">{{ '{:,.0f}'.format(sm.max) }}</b><small>{{ sm.max_day.strftime('%d/%m') }}</small></div>
+      <div><span>Đáy năm</span><b class="down">{{ '{:,.0f}'.format(sm.min) }}</b><small>{{ sm.min_day.strftime('%d/%m') }}</small></div>
+    </section>
+
+    <section id="q1">
+      <h2><span>1</span>Giá trung bình và độ biến động theo tháng</h2>
+      <div class="grid2">
+        <div class="scroll">{{ monthly_table|safe }}</div>
+        <img src="{{ url_for('static', path='img/monthly_mean.png') }}" alt="Giá trung bình theo tháng">
+      </div>
+      <img class="wide" src="{{ url_for('static', path='img/monthly_box.png') }}" alt="Boxplot theo tháng">
+      <div class="note">
+        <p>Giá trung bình cao nhất ở <b>tháng {{ hi_month }}</b> ({{ '{:,.0f}'.format(ms['mean'][hi_month]) }}),
+          thấp nhất ở <b>tháng {{ lo_month }}</b> ({{ '{:,.0f}'.format(ms['mean'][lo_month]) }}).
+          Giá lao dốc mạnh từ tháng 1 sang tháng 3, đi ngang vùng thấp suốt giữa năm rồi bật tăng vọt ở tháng 12.</p>
+        <p>Boxplot: hộp tháng 1 và tháng 12 cao và dài (phân tán lớn, nhiều giá trị ở hai đầu), còn các tháng 3–11
+          có hộp thấp và hẹp (giá ổn định ở vùng thấp). <b>Tháng dao động mạnh nhất: tháng {{ sm.wild_month }}</b>
+          với biên độ {{ '{:,.0f}'.format(sm.wild_month_range) }} VND.</p>
+      </div>
+    </section>
+
+    <section id="q2">
+      <h2><span>2</span>Biến động giá theo quý</h2>
+      <div class="scroll">{{ quarter_table|safe }}</div>
+      <div class="note">
+        <p>CV (hệ số biến thiên = độ lệch chuẩn / trung bình) cho thấy <b>Quý 4</b> ({{ qs['cv_%'][4] }}%) và
+          <b>Quý 1</b> ({{ qs['cv_%'][1] }}%) biến động mạnh nhất; <b>Quý 3</b> ({{ qs['cv_%'][3] }}%) và
+          <b>Quý 2</b> ({{ qs['cv_%'][2] }}%) ổn định hơn nhiều. Quý 1 là pha sụt giá, quý 2–3 là pha tích luỹ ở đáy,
+          quý 4 là pha bật tăng.</p>
+      </div>
+    </section>
+
+    <section id="q3">
+      <h2><span>3</span>Ngày giao dịch bất thường</h2>
+      <p class="muted">Tiêu chí: giá đóng cửa bằng giá sàn / giá trần, hoặc có phiên giá đúng bằng giá tham chiếu.
+        Có <b>{{ n_abnormal }}</b> ngày ({{ n_close_ceil }} ngày đóng cửa ở trần, {{ n_close_floor }} ngày đóng cửa ở sàn).
+        Đáng chú ý: {{ sm.all_days_touch }}/365 ngày có ít nhất một phiên chạm sàn hoặc trần — rất bất thường so với thị trường thật.</p>
+      <div class="scroll tall">{{ abnormal_table|safe }}</div>
+    </section>
+
+    <section id="q4">
+      <h2><span>4</span>Phân bố giá: hai quý đầu và hai quý cuối</h2>
+      <img class="wide" src="{{ url_for('static', path='img/hist_halves.png') }}" alt="Histogram nửa đầu và nửa cuối năm">
+      <div class="note">
+        <p>Nửa năm đầu trải rộng từ vùng thấp tới ~12.000 (do pha sụt giá đầu năm) còn nửa năm cuối dồn chặt quanh
+          1.500–4.000 với một "đuôi" kéo dài sang phải do đợt tăng vọt cuối tháng 12.</p>
+      </div>
+    </section>
+
+    <section id="q5">
+      <h2><span>5</span>Xu hướng cả năm và biên độ lớn nhất</h2>
+      <img class="wide" src="{{ url_for('static', path='img/trend.png') }}" alt="Xu hướng giá đóng cửa">
+      <div class="note">
+        <p>Giá bắt đầu {{ '{:,.0f}'.format(sm.first) }} và kết thúc {{ '{:,.0f}'.format(sm.last) }}
+          ({{ '{:+.1f}'.format(sm.change_pct) }}%), nhưng đường hồi quy có hệ số góc
+          {{ '{:+.1f}'.format(sm.slope) }} VND/ngày: xu hướng chung <b>giảm nhẹ</b>, dạng chữ U — sụt mạnh, nằm đáy
+          rất lâu rồi hồi phục gần như hoàn toàn ở cuối năm.</p>
+        <p><b>Biên độ trong ngày lớn nhất:</b> {{ '{:,.0f}'.format(sm.best_day_range) }} VND (≈ {{ '{:.0f}'.format(sm.best_day_range_pct) }}% giá tham chiếu),
+          xảy ra ngày <b>{{ sm.best_day_range_date.strftime('%d/%m/%Y') }}</b>. Biên độ cả năm: từ
+          {{ '{:,.0f}'.format(sm.min) }} ({{ sm.min_day.strftime('%d/%m') }}) đến {{ '{:,.0f}'.format(sm.max) }} ({{ sm.max_day.strftime('%d/%m') }}).</p>
+      </div>
+    </section>
+
+    <section id="q6">
+      <h2><span>6</span>Vì sao đường đi xuống nhưng có màu xanh?</h2>
+      <div class="note big">
+        <p>Màu của một mức giá được quyết định bằng cách so với <b>giá tham chiếu của ngày đó</b> (giá đóng cửa hôm trước),
+          <u>không</u> phải so với điểm liền trước trên đồ thị. Vì vậy một đoạn có thể đi xuống (giá phiên sau thấp hơn
+          phiên trước) nhưng vẫn nằm trên giá tham chiếu → vẫn mang màu xanh. Ngược lại, đoạn đi lên nhưng vẫn dưới giá tham chiếu sẽ có màu đỏ.</p>
+        <p class="muted">Ví dụ: TC = 10.000, giá đi từ 10.800 xuống 10.300 — giảm 500 nhưng vẫn cao hơn TC 3% nên màu xanh.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Mã nguồn: <code>python -m stock_sim.video</code> → <code>static/video/clt_simulation.mp4</code> ·
+       <code>python main.py</code> chạy web · triển khai bằng <code>render.yaml</code>.</p>
+  </footer>
+</body>
+</html>
